@@ -18,6 +18,7 @@ criticalpermissionhelper = "0.8.1"
 datawedgeintentwrapper = "14.10"
 poi = "5.2.3"
 poi-ooxml = "5.2.3"
+robolectric = "4.14.1"
 
 [libraries]
 androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraExtensions" }
@@ -41,6 +42,7 @@ criticalpermissionhelper =  { group = "com.github.ltrudu", name = "CriticalPermi
 datawedgeintentwrapper =  { group = "com.github.ltrudu", name = "DataWedgeIntentWrapper", version.ref = "datawedgeintentwrapper" }
 poi =  { group = "org.apache.poi", name = "poi", version.ref = "poi" }
 poiooxml =  { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi-ooxml" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -8,7 +8,7 @@ import androidx.annotation.NonNull;
 
 public enum ETheme {
     MODERN("modern",R.string.theme_modern),
-    LEGACY("release", R.string.theme_legacy);
+    LEGACY("legacy", R.string.theme_legacy);
 
     private String key;
     private int nameResourceId;

@@ -81,6 +81,8 @@ public class LocaleHelper {
                 return "🇧🇾"; // Belarus
             case "bs":
                 return "🇧🇦"; // Bosnia and Herzegovina
+            case "bn":
+                return "🇧🇩"; // Bangladesh for Bengali
             case "bg":
                 return "🇧🇬"; // Bulgaria
             case "my":
