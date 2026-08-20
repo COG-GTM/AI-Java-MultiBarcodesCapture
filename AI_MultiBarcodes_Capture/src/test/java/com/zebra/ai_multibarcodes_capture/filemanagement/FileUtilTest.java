@@ -14,8 +14,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class FileUtilTest {
@@ -201,10 +205,15 @@ public class FileUtilTest {
     }
 
     @Test
-    public void createNewFileNameAppendsTimeStampToPrefix() {
+    public void createNewFileNameAppendsCurrentTimeToPrefix() {
+        String before = new SimpleDateFormat("HH_mm_ss").format(new Date());
+
         String fileName = FileUtil.createNewFileName("MySession_");
 
-        assertTrue(fileName, fileName.matches("MySession_\\d{2}_\\d{2}_\\d{2}"));
+        String after = new SimpleDateFormat("HH_mm_ss").format(new Date());
+        assertTrue(fileName, fileName.startsWith("MySession_"));
+        String timestamp = fileName.substring("MySession_".length());
+        assertTrue(timestamp, timestamp.equals(before) || timestamp.equals(after));
     }
 
     @Test
@@ -229,7 +238,9 @@ public class FileUtilTest {
     }
 
     @Test
-    public void getTodayDateStringIsNotEmpty() {
-        assertFalse(FileUtil.getTodayDateString().isEmpty());
+    public void getTodayDateStringUsesTheLongLocaleDateFormat() {
+        String expected = DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault()).format(new Date());
+
+        assertEquals(expected, FileUtil.getTodayDateString());
     }
 }
