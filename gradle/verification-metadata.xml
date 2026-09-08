@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+   <configuration>
+      <verify-metadata>true</verify-metadata>
+      <verify-signatures>false</verify-signatures>
+      <trusted-artifacts>
+         <!--
+           JitPack (com.github.ltrudu.*) builds artifacts on demand from a personal GitHub
+           account and mutable git tags, so those artifacts are pinned by SHA-256 below.
+           Artifacts from every other group come from Google Maven / Maven Central / Zebra
+           Artifactory and are trusted here; run gradlew with the write-verification-metadata
+           option (see Gradle dependency verification docs) to pin them too.
+         -->
+         <trust group="^(?!com\.github\.ltrudu$).*" regex="true"/>
+      </trusted-artifacts>
+   </configuration>
+   <components>
+      <component group="com.github.ltrudu" name="CriticalPermissionsHelper" version="0.8.1">
+         <artifact name="CriticalPermissionsHelper-0.8.1.aar">
+            <sha256 value="7cfce87da2cf0ce74d7a254e68c0f870ad80d4533317c96e4076272861ef6152"/>
+         </artifact>
+         <artifact name="CriticalPermissionsHelper-0.8.1.module">
+            <sha256 value="4c96eae7faca2edf5b9e1ce00407f16c458be55bebd56bf19aaafbfb95522775"/>
+         </artifact>
+         <artifact name="CriticalPermissionsHelper-0.8.1.pom">
+            <sha256 value="58b20325c9145c9c86268e1ec36a0712792e72dd0faa855fd0572db1e200a13a"/>
+         </artifact>
+      </component>
+      <component group="com.github.ltrudu" name="DataWedgeIntentWrapper" version="14.10">
+         <artifact name="DataWedgeIntentWrapper-14.10.aar">
+            <sha256 value="40ff5c336d5350263d9561eb98847000921ef64488d1d933b708a9b880a0f582"/>
+         </artifact>
+         <artifact name="DataWedgeIntentWrapper-14.10.module">
+            <sha256 value="a13253cf5ce878694b645bb35c1134710f36b2768e6c676215c2f78f45b36126"/>
+         </artifact>
+         <artifact name="DataWedgeIntentWrapper-14.10.pom">
+            <sha256 value="ecbe8a7adfbed0f8fcaf4c9ae78bbcc30ef83d70bd2171ead3fd84f5699a1909"/>
+         </artifact>
+      </component>
+   </components>
+</verification-metadata>
