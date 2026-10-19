@@ -1,0 +1,12 @@
+// Puts Google's Maven Central mirror ahead of repo.maven.apache.org, which
+// rate-limits (HTTP 429) shared CI/VM egress IPs.
+def centralMirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+
+beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        maven { url = centralMirror }
+    }
+    settings.dependencyResolutionManagement.repositories {
+        maven { url = centralMirror }
+    }
+}
