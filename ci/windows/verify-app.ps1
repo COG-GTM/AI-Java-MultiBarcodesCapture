@@ -93,6 +93,7 @@ function Get-PhpExe {
     if ($onPath) { return $onPath.Source }
     $php = Join-Path $ToolsRoot 'php\php.exe'
     if (-not (Test-Path $php)) {
+        New-Item -ItemType Directory -Force -Path $ToolsRoot | Out-Null
         $zip = Join-Path $ToolsRoot 'php.zip'
         Get-Download 'https://windows.php.net/downloads/releases/latest/php-8.3-nts-Win32-vs16-x64-latest.zip' $zip
         Expand-Archive -Path $zip -DestinationPath (Join-Path $ToolsRoot 'php') -Force
@@ -121,13 +122,28 @@ function Get-LintErrorKeys([string]$XmlPath) {
     }
 }
 
+# MissingTranslation lists every missing locale in one message, so it is keyed by
+# resource and passes while its missing locales are a subset of the baseline's.
+function Split-TranslationKey([string]$Key) {
+    if ($Key -notmatch '^(MissingTranslation\|[^|]*\|"[^"]+")') { return $null }
+    $resource = $Matches[1]
+    $locales = [regex]::Matches($Key.Substring($resource.Length), '"([^"]+)" \(') | ForEach-Object { $_.Groups[1].Value }
+    return @{ Resource = $resource; Locales = @($locales) }
+}
+
 # The app has pre-existing lint errors, so lint gates on errors that are not in
 # ci/windows/lint-baseline.txt. Refresh it with -UpdateLintBaseline after fixing or accepting issues.
 function Test-Lint([string]$InitScript) {
     $lintLog = Join-Path $LogDir 'lint.log'
-    $null = Invoke-Gradle @('lintDebug') $lintLog $InitScript
     $xml = Join-Path $RepoRoot 'AI_MultiBarcodes_Capture\build\reports\lint-results-debug.xml'
-    if (-not (Test-Path $xml)) { Add-Result 'Android lint (no new errors)' $false 'lint did not produce lint-results-debug.xml (see lint.log)'; return }
+    Remove-Item $xml -Force -ErrorAction SilentlyContinue
+    $code = Invoke-Gradle @('lintDebug') $lintLog $InitScript
+    # lintDebug exits 1 whenever errors exist (always, given the baseline); anything else is a failed run.
+    $lintRan = ($code -eq 0) -or (Select-String -Path $lintLog -Pattern 'Lint found errors in the project' -Quiet)
+    if (-not $lintRan -or -not (Test-Path $xml)) {
+        Add-Result 'Android lint (no new errors)' $false "lintDebug did not complete (exit $code, see lint.log)"
+        return
+    }
     $current = @(Get-LintErrorKeys $xml | Sort-Object)
     $baselineFile = Join-Path $PSScriptRoot 'lint-baseline.txt'
     if ($UpdateLintBaseline) {
@@ -136,9 +152,22 @@ function Test-Lint([string]$InitScript) {
         return
     }
     $remaining = @{}
-    if (Test-Path $baselineFile) { foreach ($k in [IO.File]::ReadAllLines($baselineFile)) { if ($k) { $remaining[$k] = 1 + [int]$remaining[$k] } } }
+    $baselineLocales = @{}
+    if (Test-Path $baselineFile) {
+        foreach ($k in [IO.File]::ReadAllLines($baselineFile)) {
+            if (-not $k) { continue }
+            $t = Split-TranslationKey $k
+            if ($t) { $baselineLocales[$t.Resource] = $t.Locales } else { $remaining[$k] = 1 + [int]$remaining[$k] }
+        }
+    }
     $new = New-Object System.Collections.Generic.List[string]
-    foreach ($k in $current) { if ($remaining[$k] -gt 0) { $remaining[$k]-- } else { $new.Add($k) } }
+    foreach ($k in $current) {
+        $t = Split-TranslationKey $k
+        if ($t) {
+            $known = $baselineLocales[$t.Resource]
+            if (-not $known -or @($t.Locales | Where-Object { $_ -notin $known }).Count) { $new.Add($k) }
+        } elseif ($remaining[$k] -gt 0) { $remaining[$k]-- } else { $new.Add($k) }
+    }
     $detail = "$($current.Count) errors, $($new.Count) new vs baseline"
     if ($new.Count) { $script:LintNew = $new; $detail += ': ' + (($new | Select-Object -First 5 | ForEach-Object { ($_ -split '\|')[0..1] -join ' in ' }) -join '; ') }
     Add-Result 'Android lint (no new errors)' ($new.Count -eq 0) $detail
