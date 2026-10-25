@@ -4,7 +4,8 @@
 echo "🏗️ Building standalone WMS Docker image..."
 
 # Build the image
-docker build -f Dockerfile.standalone -t barcode-wms:latest .
+# --pull refreshes the floating php:8.2-apache base so the PHP2Shell-fixed build is used
+docker build --pull -f Dockerfile.standalone -t barcode-wms:latest .
 
 if [ $? -eq 0 ]; then
     echo "✅ Successfully built barcode-wms:latest"

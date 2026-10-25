@@ -1,5 +1,21 @@
 # Standalone WMS Docker Image with embedded database
+#
+# PHP2Shell (CVE-2026-109618 / CVE-2026-109619) is fixed in PHP 8.2.35. The floating
+# php:8.2-apache tag was rebuilt on 2026-10-21 and resolves to 8.2.35; verified on
+# 2026-10-25 as index digest
+#   sha256:1dcd13aa67697127a140a7d303ab955c923098c39d525ecd728f2e8afb4d1546
+# (linux/amd64 manifest sha256:a6e1550bb2c43add980125b769cd5add5aae5889419a5ddfad21bf930fa04faa,
+# base debian:trixie-slim). Rebuild with `docker build --pull --no-cache` so the
+# cached base layer is refreshed; the check below fails the build on an older PHP.
 FROM php:8.2-apache
+
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.2.35", ">=") ? 0 : 1);' \
+    || { echo "ERROR: PHP $(php -r 'echo PHP_VERSION;') is older than 8.2.35 (PHP2Shell CVE-2026-109618/CVE-2026-109619 unfixed); rebuild with --pull" >&2; exit 1; }
+
+# Mitigation only (not the fix): disable session upload progress, as recommended
+# by the PHP team for PHP2Shell.
+RUN printf '; PHP2Shell (CVE-2026-109618 / CVE-2026-109619) mitigation, not the fix\nsession.upload_progress.enabled = 0\n' \
+      > /usr/local/etc/php/conf.d/zz-php2shell-mitigation.ini
 
 # Install system dependencies and MySQL
 RUN apt-get update && apt-get install -y \

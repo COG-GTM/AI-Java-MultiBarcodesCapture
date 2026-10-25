@@ -6,6 +6,9 @@ FROM ubuntu:22.04
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Minimum php8.1 package release that contains the PHP2Shell fix (see RUN check below)
+ARG PHP81_MIN_VERSION=8.1.2-1ubuntu2.28
+
 # Install all required packages
 RUN apt-get update && apt-get install -y \
     apache2 \
@@ -28,6 +31,23 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     nano \
     && rm -rf /var/lib/apt/lists/*
+
+# PHP2Shell (CVE-2026-109618 / CVE-2026-109619): Ubuntu jammy ships the fix in
+# php8.1 8.1.2-1ubuntu2.28 (jammy-security). Fail the build if apt installed
+# anything older, so a stale mirror or cached layer can't ship a vulnerable mod_php.
+RUN dpkg-query -W -f='${db:Status-Status}\t${Package}\t${Version}\n' 'php8.1*' 'libapache2-mod-php8.1' \
+    | awk -F'\t' '$1=="installed"{print $2"\t"$3}' \
+    | while IFS="$(printf '\t')" read -r pkg ver; do \
+        echo "$pkg $ver"; \
+        dpkg --compare-versions "$ver" ge "$PHP81_MIN_VERSION" \
+          || { echo "ERROR: $pkg $ver is older than $PHP81_MIN_VERSION (PHP2Shell CVE-2026-109618/CVE-2026-109619 unfixed)" >&2; exit 1; }; \
+      done
+
+# Mitigation only (not the fix): disable session upload progress, as recommended
+# by the PHP team for PHP2Shell. Applied to every SAPI (apache2, cli) via phpenmod.
+RUN printf '; PHP2Shell (CVE-2026-109618 / CVE-2026-109619) mitigation, not the fix\nsession.upload_progress.enabled = 0\n' \
+      > /etc/php/8.1/mods-available/php2shell-mitigation.ini \
+    && phpenmod -v 8.1 php2shell-mitigation
 
 # Install Composer for PHP dependency management
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer

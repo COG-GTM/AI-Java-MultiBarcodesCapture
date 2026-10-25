@@ -2,6 +2,7 @@ services:
   webinterface-simple:
     build:
       context: .
+      pull: true
       dockerfile: Dockerfile.simple
     image: multibarcode-webinterface:simple
     container_name: multibarcode-webinterface-simple
