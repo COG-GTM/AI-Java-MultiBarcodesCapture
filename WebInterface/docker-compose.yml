@@ -2,6 +2,7 @@ services:
   multibarcode-webinterface:
     build:
       context: .
+      pull: true
       dockerfile: Dockerfile
     image: multibarcode-webinterface:latest
     container_name: multibarcode-webinterface
