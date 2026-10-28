@@ -8,6 +8,8 @@ class WMSApp {
         this.lastUpdateTime = null;
         this.existingSessionIds = new Set();
         this.selectedSessions = new Set();
+        this.showDuplicateSessionsOnly = false;
+        this.showDuplicatesOnly = false;
         this.currentLanguage = 'en';
         this.translations = {};
         this.availableLanguages = {}; // Will be populated dynamically
@@ -167,6 +169,7 @@ class WMSApp {
         return oldSession.total_barcodes !== newSession.total_barcodes ||
                oldSession.processed_count !== newSession.processed_count ||
                oldSession.pending_count !== newSession.pending_count ||
+               oldSession.duplicate_scans !== newSession.duplicate_scans ||
                oldSession.last_scan !== newSession.last_scan;
     }
 
@@ -175,6 +178,9 @@ class WMSApp {
         if (!tableBody) return;
 
         newSessions.forEach(session => {
+            if (this.showDuplicateSessionsOnly && !this.sessionHasDuplicates(session)) {
+                return;
+            }
             const sessionRow = this.createSessionRow(session);
 
             // Add new session animation class
@@ -240,6 +246,7 @@ class WMSApp {
             <td onclick="app.showSessionDetails(${session.id})">${session.device_ip || this.t('not_available', 'N/A')}</td>
             <td onclick="app.showSessionDetails(${session.id})">${session.total_barcodes}</td>
             <td onclick="app.showSessionDetails(${session.id})">${session.unique_symbologies}</td>
+            <td class="duplicates-cell" onclick="app.showSessionDetails(${session.id})">${this.renderDuplicateBadge(session)}</td>
             <td onclick="app.showSessionDetails(${session.id})">${session.processed_count}/${session.total_barcodes}</td>
             <td onclick="app.showSessionDetails(${session.id})">
                 <span class="status ${processedPercent === 100 ? 'processed' : 'pending'}">
@@ -250,6 +257,39 @@ class WMSApp {
         `;
 
         return row;
+    }
+
+    sessionHasDuplicates(session) {
+        return Number(session.duplicate_scans) > 0;
+    }
+
+    renderDuplicateBadge(session) {
+        const scans = Number(session.duplicate_scans) || 0;
+        const values = Number(session.duplicate_values) || 0;
+        if (scans === 0) {
+            return `<span class="duplicate-none">${this.t('no_duplicates', 'None')}</span>`;
+        }
+        const title = `${values} ${this.t('duplicate_values_label', 'repeated value(s)')} / ${scans} ${this.t('duplicate_scans_label', 'duplicate scans')}`;
+        return `<span class="status duplicate" title="${title}">⚠ ${scans} <small>(${values} ${this.t('values_short', 'val.')})</small></span>`;
+    }
+
+    toggleDuplicateSessionsFilter(enabled) {
+        this.showDuplicateSessionsOnly = !!enabled;
+        this.renderSessions();
+        this.updateStats();
+    }
+
+    toggleDuplicatesOnlyFilter(enabled) {
+        this.showDuplicatesOnly = !!enabled;
+        if (this.currentSession) {
+            this.renderSessionDetails();
+        }
+    }
+
+    getVisibleSessions() {
+        return this.showDuplicateSessionsOnly
+            ? this.sessions.filter(session => this.sessionHasDuplicates(session))
+            : this.sessions;
     }
 
     async loadSessionDetails(sessionId) {
@@ -448,19 +488,35 @@ class WMSApp {
                     <div class="stat-value" id="pending-barcodes">0</div>
                     <div class="stat-label">${this.t('pending', 'Pending')}</div>
                 </div>
+                <div class="stat-card stat-card-duplicates">
+                    <div class="stat-value" id="duplicate-barcodes">0</div>
+                    <div class="stat-label">${this.t('duplicate_scans', 'Duplicate Scans')}</div>
+                </div>
             </div>
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header card-header-flex">
                     <h2>${this.t('recent_capture_sessions', 'Recent Capture Sessions')}</h2>
+                    <label class="filter-toggle" for="filter-duplicate-sessions">
+                        <input type="checkbox" id="filter-duplicate-sessions" ${this.showDuplicateSessionsOnly ? 'checked' : ''}>
+                        <span>⚠ ${this.t('filter_sessions_with_duplicates', 'Only sessions with duplicates')}</span>
+                    </label>
                 </div>
                 <div class="card-body">
         `;
+
+        const visibleSessions = this.getVisibleSessions();
 
         if (this.sessions.length === 0) {
             html += `
                 <div class="text-center" style="padding: 2rem; color: #6c757d;">
                     <p>${this.t('no_sessions_message', 'No capture sessions found. Sessions will appear here when your Android app uploads barcode data.')}</p>
+                </div>
+            `;
+        } else if (visibleSessions.length === 0) {
+            html += `
+                <div class="text-center empty-filter-message" style="padding: 2rem; color: #6c757d;">
+                    <p>${this.t('no_duplicate_sessions_message', 'No capture sessions contain duplicate scans.')}</p>
                 </div>
             `;
         } else {
@@ -489,6 +545,7 @@ class WMSApp {
                                 <th>${this.t('device_ip', 'Device IP')}</th>
                                 <th>${this.t('total_barcodes', 'Total Barcodes')}</th>
                                 <th>${this.t('symbology', 'Unique Types')}</th>
+                                <th>${this.t('duplicates', 'Duplicates')}</th>
                                 <th>${this.t('processed', 'Processed')}</th>
                                 <th>${this.t('status', 'Status')}</th>
                                 <th>${this.t('duration', 'Duration')}</th>
@@ -497,33 +554,8 @@ class WMSApp {
                         <tbody>
             `;
 
-            this.sessions.forEach(session => {
-                const sessionTime = new Date(session.session_timestamp).toLocaleString();
-                const duration = this.calculateSessionDuration(session.first_scan, session.last_scan);
-                const processedPercent = session.total_barcodes > 0
-                    ? Math.round((session.processed_count / session.total_barcodes) * 100)
-                    : 0;
-
-                const isSelected = this.selectedSessions.has(session.id.toString());
-                html += `
-                    <tr class="session-row" data-session-id="${session.id}">
-                        <td class="checkbox-cell" onclick="event.stopPropagation();">
-                            <input type="checkbox" class="session-checkbox" value="${session.id}" ${isSelected ? 'checked' : ''}>
-                        </td>
-                        <td onclick="app.showSessionDetails(${session.id})">${sessionTime}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">${session.device_info || this.t('unknown_device', 'Unknown Device')}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">${session.device_ip || this.t('not_available', 'N/A')}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">${session.total_barcodes}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">${session.unique_symbologies}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">${session.processed_count}/${session.total_barcodes}</td>
-                        <td onclick="app.showSessionDetails(${session.id})">
-                            <span class="status ${processedPercent === 100 ? 'processed' : 'pending'}">
-                                ${processedPercent}% ${this.t('complete', 'Complete')}
-                            </span>
-                        </td>
-                        <td onclick="app.showSessionDetails(${session.id})">${duration}</td>
-                    </tr>
-                `;
+            visibleSessions.forEach(session => {
+                html += this.createSessionRow(session).outerHTML;
             });
 
             html += `
@@ -545,6 +577,13 @@ class WMSApp {
         this.selectedSessions.clear();
         this.updateSelectionUI();
 
+        const duplicateSessionsFilter = document.getElementById('filter-duplicate-sessions');
+        if (duplicateSessionsFilter) {
+            duplicateSessionsFilter.addEventListener('change', (e) => {
+                this.toggleDuplicateSessionsFilter(e.target.checked);
+            });
+        }
+
         // Re-attach event listeners after DOM update
         this.attachSessionEventListeners();
     }
@@ -556,6 +595,11 @@ class WMSApp {
 
         const sessionTime = new Date(session.session_timestamp).toLocaleString();
         const duration = this.calculateSessionDuration(session.first_scan, session.last_scan);
+        const duplicateScans = Number(session.duplicate_scans) || 0;
+        const duplicateValues = Number(session.duplicate_values) || 0;
+        const visibleBarcodes = this.showDuplicatesOnly
+            ? barcodes.filter(barcode => barcode.is_duplicate)
+            : barcodes;
 
         let html = `
             <div class="card">
@@ -581,6 +625,10 @@ class WMSApp {
                             <div class="stat-value">${duration}</div>
                             <div class="stat-label">${this.t('duration', 'Duration')}</div>
                         </div>
+                        <div class="stat-card stat-card-duplicates ${duplicateScans > 0 ? 'has-duplicates' : ''}">
+                            <div class="stat-value" id="session-duplicate-scans">${duplicateScans}</div>
+                            <div class="stat-label">${this.t('duplicate_scans', 'Duplicate Scans')}${duplicateScans > 0 ? ` <small>(${duplicateValues} ${this.t('duplicate_values_label', 'repeated value(s)')})</small>` : ''}</div>
+                        </div>
                     </div>
 
                     <div style="margin-bottom: 2rem;">
@@ -594,8 +642,12 @@ class WMSApp {
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <h2>${this.t('captured_barcodes', 'Captured Barcodes')} (${barcodes.length})</h2>
+                <div class="card-header card-header-flex">
+                    <h2>${this.t('captured_barcodes', 'Captured Barcodes')} (${this.showDuplicatesOnly ? `${visibleBarcodes.length}/${barcodes.length}` : barcodes.length})</h2>
+                    <label class="filter-toggle" for="filter-duplicates-only">
+                        <input type="checkbox" id="filter-duplicates-only" ${this.showDuplicatesOnly ? 'checked' : ''}>
+                        <span>⚠ ${this.t('filter_duplicates_only', 'Show duplicates only')} (${duplicateScans})</span>
+                    </label>
                 </div>
                 <div class="card-body">
         `;
@@ -603,16 +655,26 @@ class WMSApp {
         if (barcodes.length === 0) {
             html += `
                 <div class="text-center" style="padding: 2rem; color: #6c757d;">
-                    <p>No barcodes found in this session.</p>
+                    <p>${this.t('no_barcodes_in_session', 'No barcodes found in this session.')}</p>
+                </div>
+            `;
+        } else if (visibleBarcodes.length === 0) {
+            html += `
+                <div class="text-center empty-filter-message" style="padding: 2rem; color: #6c757d;">
+                    <p>${this.t('no_duplicates_in_session', 'No duplicate scans in this session.')}</p>
                 </div>
             `;
         } else {
-            barcodes.forEach(barcode => {
+            visibleBarcodes.forEach(barcode => {
                 const scanTime = new Date(barcode.timestamp).toLocaleString();
+                const isDuplicate = !!barcode.is_duplicate;
+                const duplicateBadge = isDuplicate
+                    ? `<span class="status duplicate duplicate-badge" title="${this.t('duplicate_tooltip', 'This barcode value was captured more than once in this session')}">⚠ ${this.t('duplicate', 'Duplicate')} ${barcode.occurrence_index}/${barcode.occurrence_count}</span>`
+                    : '';
 
                 html += `
-                    <div class="barcode-item" data-barcode-id="${barcode.id}">
-                        <div class="barcode-value">${this.escapeHtml(barcode.value)}</div>
+                    <div class="barcode-item ${isDuplicate ? 'duplicate' : ''}" data-barcode-id="${barcode.id}" data-duplicate="${isDuplicate}">
+                        <div class="barcode-value">${this.escapeHtml(barcode.value)} ${duplicateBadge}</div>
                         <div class="barcode-meta">
                             <div class="meta-item">
                                 <span class="meta-label">${this.t('symbology', 'Symbology')}</span>
@@ -746,6 +808,13 @@ class WMSApp {
         document.getElementById('btn-back').addEventListener('click', () => {
             this.showSessions();
         });
+
+        const duplicatesOnlyFilter = document.getElementById('filter-duplicates-only');
+        if (duplicatesOnlyFilter) {
+            duplicatesOnlyFilter.addEventListener('change', (e) => {
+                this.toggleDuplicatesOnlyFilter(e.target.checked);
+            });
+        }
     }
 
     updateStats() {
@@ -753,12 +822,14 @@ class WMSApp {
         const totalBarcodes = this.sessions.reduce((sum, session) => sum + session.total_barcodes, 0);
         const processedBarcodes = this.sessions.reduce((sum, session) => sum + session.processed_count, 0);
         const pendingBarcodes = totalBarcodes - processedBarcodes;
+        const duplicateBarcodes = this.sessions.reduce((sum, session) => sum + (Number(session.duplicate_scans) || 0), 0);
 
         const elements = {
             'total-sessions': totalSessions,
             'total-barcodes': totalBarcodes,
             'processed-barcodes': processedBarcodes,
-            'pending-barcodes': pendingBarcodes
+            'pending-barcodes': pendingBarcodes,
+            'duplicate-barcodes': duplicateBarcodes
         };
 
         Object.entries(elements).forEach(([id, value]) => {
@@ -767,6 +838,11 @@ class WMSApp {
                 element.textContent = value;
             }
         });
+
+        const duplicateCard = document.querySelector('.stat-card-duplicates');
+        if (duplicateCard) {
+            duplicateCard.classList.toggle('has-duplicates', duplicateBarcodes > 0);
+        }
     }
 
     calculateSessionDuration(firstScan, lastScan) {

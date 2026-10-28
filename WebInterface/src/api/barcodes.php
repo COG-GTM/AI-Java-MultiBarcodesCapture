@@ -16,6 +16,23 @@ class BarcodeAPI {
     private $db;
     private $connection;
 
+    // Per-session duplicate statistics: a duplicate is the same barcode value
+    // (exact, case-sensitive match) captured more than once in one session.
+    // duplicate_scans  = number of scans that belong to a repeated value
+    // duplicate_values = number of distinct values that were repeated
+    const DUPLICATE_STATS_SQL = "
+        SELECT session_id,
+               SUM(occurrences) AS duplicate_scans,
+               COUNT(*) AS duplicate_values
+        FROM (
+            SELECT session_id, COUNT(*) AS occurrences
+            FROM barcodes
+            GROUP BY session_id, CAST(value AS BINARY)
+            HAVING COUNT(*) > 1
+        ) repeated
+        GROUP BY session_id
+    ";
+
     public function __construct() {
         $this->db = new Database();
         $this->connection = $this->db->getConnection();
@@ -152,12 +169,21 @@ class BarcodeAPI {
     private function getAllSessions() {
         try {
             $stmt = $this->connection->prepare("
-                SELECT * FROM session_statistics
-                ORDER BY created_at DESC
+                SELECT ss.*,
+                       COALESCE(d.duplicate_scans, 0) AS duplicate_scans,
+                       COALESCE(d.duplicate_values, 0) AS duplicate_values
+                FROM session_statistics ss
+                LEFT JOIN (" . self::DUPLICATE_STATS_SQL . ") d ON d.session_id = ss.id
+                ORDER BY ss.created_at DESC
                 LIMIT 100
             ");
             $stmt->execute();
             $sessions = $stmt->fetchAll();
+            foreach ($sessions as &$session) {
+                $session['duplicate_scans'] = (int)$session['duplicate_scans'];
+                $session['duplicate_values'] = (int)$session['duplicate_values'];
+            }
+            unset($session);
 
             $this->sendResponse([
                 'success' => true,
@@ -187,11 +213,15 @@ class BarcodeAPI {
             // Get barcodes for this session
             $barcodes_stmt = $this->connection->prepare("
                 SELECT * FROM barcode_details WHERE session_id = :session_id
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, id ASC
             ");
             $barcodes_stmt->bindParam(':session_id', $session_id);
             $barcodes_stmt->execute();
             $barcodes = $barcodes_stmt->fetchAll();
+
+            $duplicates = $this->annotateDuplicates($barcodes);
+            $session['duplicate_scans'] = $duplicates['duplicate_scans'];
+            $session['duplicate_values'] = $duplicates['duplicate_values'];
 
             $this->sendResponse([
                 'success' => true,
@@ -332,6 +362,41 @@ class BarcodeAPI {
         } catch (Exception $e) {
             $this->sendError('Failed to reset data: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Adds occurrence_count / occurrence_index / is_duplicate to each barcode
+     * (barcodes must be ordered by scan time) and returns the session totals.
+     */
+    private function annotateDuplicates(array &$barcodes) {
+        $counts = [];
+        foreach ($barcodes as $barcode) {
+            $key = (string)$barcode['value'];
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+
+        $seen = [];
+        $duplicate_scans = 0;
+        $duplicate_values = 0;
+        foreach ($barcodes as &$barcode) {
+            $key = (string)$barcode['value'];
+            $seen[$key] = ($seen[$key] ?? 0) + 1;
+            $barcode['occurrence_count'] = $counts[$key];
+            $barcode['occurrence_index'] = $seen[$key];
+            $barcode['is_duplicate'] = $counts[$key] > 1;
+            if ($counts[$key] > 1) {
+                $duplicate_scans++;
+                if ($seen[$key] === 1) {
+                    $duplicate_values++;
+                }
+            }
+        }
+        unset($barcode);
+
+        return [
+            'duplicate_scans' => $duplicate_scans,
+            'duplicate_values' => $duplicate_values
+        ];
     }
 
     private function convertTimestamp($timestamp) {

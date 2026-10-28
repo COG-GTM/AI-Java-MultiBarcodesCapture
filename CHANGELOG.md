@@ -2,6 +2,23 @@
 
 All notable changes to the AI MultiBarcode Capture Application are documented in this file.
 
+### Version 1.37 - 🔁 **Duplicate Scan Detection (Web Interface)**
+
+**The WMS dashboard now flags and counts barcodes that were captured more than once within the same capture session.**
+
+#### 🔁 **Duplicate Detection:**
+
+• **Per-Session Duplicate Counts**: `GET /api/barcodes.php` now returns `duplicate_scans` (scans belonging to a repeated value) and `duplicate_values` (distinct values that repeat) for every session
+• **Per-Barcode Flags**: `GET /api/barcodes.php?session_id=…` annotates each barcode with `is_duplicate`, `occurrence_index` and `occurrence_count`
+• **Exact Matching**: Duplicates are detected on the exact (case-sensitive) barcode value within a single session; different sessions never affect each other
+
+#### 📊 **Dashboard:**
+
+• **Duplicate Scans Stat Card**: Total duplicate scans across all sessions on the overview, and per session on the details view
+• **Duplicates Column**: Sessions table shows a red ⚠ badge with the duplicate scan count (and number of repeated values) or "None"
+• **Session Filter**: "Only sessions with duplicates" toggle hides clean sessions
+• **Barcode Filter**: "Show duplicates only" toggle on the session details view; duplicated barcodes are highlighted with a red border and a "Duplicate n/N" badge
+
 ### Version 1.36 - ⚡ **Performance & Android 15+ Compatibility**
 
 **Ultra-fast native grayscale image processing with NDK/JNI and Android 15+ 16KB page size support.**
