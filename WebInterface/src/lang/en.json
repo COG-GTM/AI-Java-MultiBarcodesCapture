@@ -133,5 +133,18 @@
   "export_barcode_info": "All barcodes with values, symbologies, and quantities",
   "export_status_info": "Processing status and notes",
   "no_sessions_selected": "No sessions selected for export",
-  "export_failed": "Export failed"
+  "export_failed": "Export failed",
+  "duplicates": "Duplicates",
+  "duplicate": "Duplicate",
+  "duplicate_scans": "Duplicate Scans",
+  "duplicate_scans_label": "duplicate scans",
+  "duplicate_values_label": "repeated value(s)",
+  "values_short": "val.",
+  "no_duplicates": "None",
+  "filter_sessions_with_duplicates": "Only sessions with duplicates",
+  "filter_duplicates_only": "Show duplicates only",
+  "no_duplicate_sessions_message": "No capture sessions contain duplicate scans.",
+  "no_duplicates_in_session": "No duplicate scans in this session.",
+  "no_barcodes_in_session": "No barcodes found in this session.",
+  "duplicate_tooltip": "This barcode value was captured more than once in this session"
 }
