@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android build + unit tests (JDK 21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build debug APK and run unit tests
+        run: ./gradlew assembleDebug testDebugUnitTest --stacktrace
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: AI_MultiBarcodes_Capture/build/reports/tests/testDebugUnitTest
+
+  api-contract:
+    name: OpenAPI lint + contract test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lint OpenAPI spec
+        run: npx --yes @redocly/cli@1.34.3 lint api-spec/openapi.yaml --config api-spec/redocly.yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r api-spec/requirements.txt
+      - name: Start WebInterface
+        working-directory: WebInterface
+        run: ./start-services.sh
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3500/api/barcodes.php && exit 0
+            sleep 5
+          done
+          docker logs multibarcode-webinterface --tail 50
+          exit 1
+      - name: Contract test against running API
+        run: python api-spec/contract_test.py --allow-reset

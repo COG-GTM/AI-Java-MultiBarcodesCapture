@@ -195,7 +195,7 @@ https://github.com/ltrudu/AI_MutliBarcodes_Capture
 ### **Requirements**
 - **Android 14+ (API 34)**: Minimum supported version
 - **Target SDK 35**: Android 14+ optimization
-- **Java 1.8**: Language compatibility
+- **Java 21**: Language level and Gradle toolchain (JDK 21 required to build)
 
 ### **Dependencies**
 - **Zebra AI Vision SDK**: v3.0.5 - Core barcode detection engine
@@ -208,8 +208,16 @@ https://github.com/ltrudu/AI_MutliBarcodes_Capture
 - **DataWedge Intent Wrapper**: 14.10 - Simplifies the setup of DataWedge for barcode scanning in the Settings Activity [DataWedgeIntentWrapper Repository](https://github.com/ltrudu/DataWedgeIntentWrapper)
 
 ### **Build Configuration**
-- **Android Gradle Plugin**: 8.11.0
-- **Gradle Wrapper**: 8.9
+- **Android Gradle Plugin**: 8.13.0
+- **Gradle Wrapper**: 8.13
+- **JDK**: 21 (`java.toolchain` in `AI_MultiBarcodes_Capture/build.gradle.kts`)
+- **Unit tests**: JUnit 5 (Jupiter) on the JVM: `./gradlew assembleDebug testDebugUnitTest`
+
+### **Web API Contract**
+- **OpenAPI 3.1 spec**: [`api-spec/openapi.yaml`](api-spec/openapi.yaml) documents `barcodes.php`, `export.php` and `server-info.php`
+- **Lint**: `npx @redocly/cli lint api-spec/openapi.yaml --config api-spec/redocly.yaml`
+- **Contract test** (WebInterface running on port 3500): `pip install -r api-spec/requirements.txt && python api-spec/contract_test.py`
+- **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the Android build/tests and the API lint/contract test
 
 ## 📋 Configuration
 

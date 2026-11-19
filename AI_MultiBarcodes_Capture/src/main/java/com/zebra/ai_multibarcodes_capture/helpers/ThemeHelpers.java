@@ -69,8 +69,7 @@ public class ThemeHelpers {
 
                 // Below code is for adding padding top and bottom (setting margins on the rootLayout)
                 ViewGroup.LayoutParams lp = v.getLayoutParams();
-                if (lp instanceof ViewGroup.MarginLayoutParams) {
-                    ViewGroup.MarginLayoutParams marginLp = (ViewGroup.MarginLayoutParams) lp;
+                if (lp instanceof ViewGroup.MarginLayoutParams marginLp) {
 
                     // The Kotlin updateLayoutParams<MarginLayoutParams> block is equivalent to this:
                     marginLp.topMargin = insets.top;
@@ -227,14 +226,14 @@ public class ThemeHelpers {
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
 
-            if (child instanceof TextView) {
-                ((TextView) child).setTypeface(typeface);
-            } else if (child instanceof Button) {
-                ((Button) child).setTypeface(typeface);
+            if (child instanceof TextView textView) {
+                textView.setTypeface(typeface);
+            } else if (child instanceof Button button) {
+                button.setTypeface(typeface);
             }
 
-            if (child instanceof ViewGroup) {
-                applyFontToViewGroup((ViewGroup) child, typeface);
+            if (child instanceof ViewGroup childGroup) {
+                applyFontToViewGroup(childGroup, typeface);
             }
         }
     }

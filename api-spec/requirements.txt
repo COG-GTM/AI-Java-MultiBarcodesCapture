@@ -1,0 +1,2 @@
+openapi-core==0.19.5
+requests==2.32.3

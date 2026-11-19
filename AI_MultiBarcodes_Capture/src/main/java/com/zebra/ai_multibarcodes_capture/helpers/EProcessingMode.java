@@ -29,15 +29,11 @@ public enum EProcessingMode {
 
     public static EProcessingMode fromKey(String key)
     {
-        switch(key)
-        {
-            case "file":
-                return FILE;
-            case "https_post":
-                return HTTPSPOST;
-            default:
-                return FILE;
-        }
+        return switch (key) {
+            case "file" -> FILE;
+            case "https_post" -> HTTPSPOST;
+            default -> FILE;
+        };
     }
 
     public static EProcessingMode fromDisplayName(Context context, String displayName)

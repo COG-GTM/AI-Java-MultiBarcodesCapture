@@ -2,6 +2,14 @@
 
 All notable changes to the AI MultiBarcode Capture Application are documented in this file.
 
+### Unreleased - **Java 21 Project Standards**
+
+• **Java 21**: Android module compiles with `JavaVersion.VERSION_21` and a JDK 21 Gradle toolchain (was Java 1.8)
+• **Modern Java**: Enum lookups (`EBarcodesSymbologies`, `EExportMode`, `EProcessingMode`, `ECaptureTriggerMode`, `ETheme`, `EInferenceType`) use switch expressions; `instanceof` pattern matching in `ThemeHelpers` and `CapturedBarcodesActivity`
+• **Tests**: JUnit 4 placeholder replaced by 228 JUnit 5 tests covering enum mappings and Android/MySQL symbology parity (`WebInterface/database/init.sql`)
+• **OpenAPI**: `api-spec/openapi.yaml` (OpenAPI 3.1) for the WebInterface REST API, with Redocly lint and a live contract test
+• **CI**: GitHub Actions workflow for the Android build/unit tests and the API contract
+
 ### Version 1.36 - ⚡ **Performance & Android 15+ Compatibility**
 
 **Ultra-fast native grayscale image processing with NDK/JNI and Android 15+ 16KB page size support.**
