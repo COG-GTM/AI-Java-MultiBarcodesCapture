@@ -1,0 +1,7 @@
+extends:
+  - recommended
+rules:
+  # The local WebInterface is the only deployment target; localhost servers are intentional.
+  no-server-example.com: off
+  # OPTIONS preflight and server-info have no client-error responses in the PHP implementation.
+  operation-4xx-response: off

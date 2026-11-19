@@ -863,9 +863,9 @@ public class CapturedBarcodesActivity extends AppCompatActivity {
 
         try {
             // Configure HTTPS connection if needed
-            if (connection instanceof HttpsURLConnection) {
+            if (connection instanceof HttpsURLConnection httpsConnection) {
                 LogUtils.d("CapturedBarcodes", "Detected HTTPS connection, configuring SSL");
-                configureSslForHttps((HttpsURLConnection) connection);
+                configureSslForHttps(httpsConnection);
                 LogUtils.d("CapturedBarcodes", "SSL configuration completed");
             } else {
                 LogUtils.d("CapturedBarcodes", "Using HTTP connection (no SSL needed)");

@@ -45,17 +45,12 @@ public enum EInferenceType {
 
     public int toInferencerOptions()
     {
-        switch(this)
-        {
-            case DSP:
-                return InferencerOptions.DSP;
-            case CPU:
-                return InferencerOptions.CPU;
-            case GPU:
-                return InferencerOptions.GPU;
-            default:
-                return InferencerOptions.CPU;
-        }
+        return switch (this) {
+            case DSP -> InferencerOptions.DSP;
+            case CPU -> InferencerOptions.CPU;
+            case GPU -> InferencerOptions.GPU;
+            default -> InferencerOptions.CPU;
+        };
     }
 
     public String getDescription(Context context) {

@@ -31,15 +31,11 @@ public enum ETheme {
 
     public static ETheme fromKey(String key)
     {
-        switch(key)
-        {
-            case "modern":
-                return MODERN;
-            case "legacy":
-                return LEGACY;
-            default:
-                return MODERN;
-        }
+        return switch (key) {
+            case "modern" -> MODERN;
+            case "legacy" -> LEGACY;
+            default -> MODERN;
+        };
     }
 
     public static ETheme fromDisplayName(Context context, String displayName)

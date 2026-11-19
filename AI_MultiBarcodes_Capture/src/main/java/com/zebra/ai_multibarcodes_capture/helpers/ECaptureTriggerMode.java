@@ -31,15 +31,11 @@ public enum ECaptureTriggerMode {
 
     public static ECaptureTriggerMode fromKey(String key)
     {
-        switch(key)
-        {
-            case "press":
-                return CAPTURE_ON_PRESS;
-            case "release":
-                return CAPTURE_ON_RELEASE;
-            default:
-                return CAPTURE_ON_PRESS;
-        }
+        return switch (key) {
+            case "press" -> CAPTURE_ON_PRESS;
+            case "release" -> CAPTURE_ON_RELEASE;
+            default -> CAPTURE_ON_PRESS;
+        };
     }
 
     public static ECaptureTriggerMode fromDisplayName(Context context, String displayName)

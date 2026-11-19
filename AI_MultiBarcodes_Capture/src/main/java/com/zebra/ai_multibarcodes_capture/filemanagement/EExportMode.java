@@ -21,27 +21,20 @@ public enum EExportMode {
 
     public String getExtension()
     {
-        switch(this) {
-            case TEXT:
-                return ".txt";
-            case CSV:
-                return ".csv";
-            case EXCEL:
-                return ".xlsx";
-        }
-        return ".txt";
+        return switch (this) {
+            case TEXT -> ".txt";
+            case CSV -> ".csv";
+            case EXCEL -> ".xlsx";
+            default -> ".txt";
+        };
     }
 
     public static EExportMode fromExtension(String value)
     {
-        switch(value)
-        {
-            case ".csv":
-                return EExportMode.CSV;
-            case ".xlsx":
-                return EExportMode.EXCEL;
-            default:
-                return EExportMode.TEXT;
-        }
+        return switch (value) {
+            case ".csv" -> CSV;
+            case ".xlsx" -> EXCEL;
+            default -> TEXT;
+        };
     }
 }
